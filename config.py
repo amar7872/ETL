@@ -6,7 +6,7 @@ import json
 
 GCP_PROJECT_ID = "project-test1-389013"
 
-def get_secret(self, project_id, secret_name, version="latest")-> dict:
+def get_secret(project_id, secret_name, version="latest")-> dict:
 
     c=secretmanager.SecretManagerServiceClient.from_service_account_json("/home/amar_gcplearning7872/secrets/secretmanager.json")
     secret_name_long=f"projects/{project_id}/secrets/{secret_name}/versions/{version}"

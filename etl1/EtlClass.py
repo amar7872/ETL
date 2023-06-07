@@ -3,8 +3,11 @@ from google.cloud import storage, bigquery
 import os
 from pathlib import Path
 import json
-from config import GCP_PROJECT_ID, get_secret
+from config import GCP_PROJECT_ID, TIMESTAMP, TIMESTAMP_STR
+from logging import Logger
+from config import get_secret, get_etl_logger
 
+my_logger=get_etl_logger("etl_logger", f"logs/log_etl1_{TIMESTAMP_STR}.log")
 
 class ETL:
 
@@ -17,11 +20,19 @@ class ETL:
     secret_name="etl_credentials"
 
     def run(self):
-        print("uploading raw data in GCS ...")
+
+        my_logger.info("***************************Run beggining********************************")
+        my_logger.info("uploading raw data to GCS...")
         self.upload_data_in_gcs()
 
-        print("staging data in BigQuery...")
+        my_logger.info("staging data in BigQuery...")
         self.stage_in_bigquery()
+
+        my_logger.info("uploading logfile to GCS...")
+        self.upload_logs_in_GCS()
+
+        my_logger.info("******************************Run End************************************\n")
+
 
       
     def upload_data_in_gcs(self):
@@ -36,10 +47,12 @@ class ETL:
         input_files =os.listdir(input_dir)
 
         for f in input_files:
-            print(f"\t\tuploading file {Path(input_dir,f)}")
+            my_logger.info(f"\tuploading file {Path(input_dir,f)}")
             blob= bucket.blob(f)
             blob.upload_from_filename(Path(input_dir,f))
             self.uploaded_files.append(f)
+
+        my_logger.info(f"\t{len(input_files)} files uploaded in GCS bucket 'etl-source-data0'")
         
 
 
@@ -50,7 +63,7 @@ class ETL:
 
         c=0
         for blob in self.uploaded_files:
-            print(f"\t\timporting blob {blob}")
+            my_logger.info(f"\timporting blob {blob}")
             c+=1
             load_conf=bigquery.LoadJobConfig(skip_leading_rows=1, 
                                              write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE if c==1 else bigquery.WriteDisposition.WRITE_APPEND , 
@@ -60,7 +73,16 @@ class ETL:
             job.result()
 
 
+    def upload_logs_in_GCS(self):
 
+        secret_dict= get_secret(GCP_PROJECT_ID, self.secret_name)
+        gcs=storage.Client.from_service_account_info(secret_dict)#.from_service_account_json("/home/amar_gcplearning7872/secrets/etl_user.json")
+        bucket=gcs.get_bucket('etl__logs')
+        
+        blob = bucket.blob(f"ETL1_logs/log_etl1_{TIMESTAMP_STR}new.log")
+
+        blob.upload_from_filename(f"logs/log_etl1_{TIMESTAMP_STR}.log")
+ 
 
 
 

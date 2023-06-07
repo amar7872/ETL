@@ -1,8 +1,14 @@
 import pandas as pd
 from google.cloud import storage, bigquery, secretmanager
-import os
+import os, sys
 from pathlib import Path
 import json
+import logging
+import datetime
+
+TIMESTAMP = datetime.datetime.now()
+
+TIMESTAMP_STR = datetime.datetime.now().strftime("%Y%m%d")
 
 GCP_PROJECT_ID = "project-test1-389013"
 
@@ -25,4 +31,18 @@ def get_storage_client(self, credentials_dict:dict):
 
 def get_bigquery_client():
     pass
+
+
+
+def get_etl_logger(name, path):
+
+    Path("logs").mkdir(exist_ok=True)
+
+    logger=logging.getLogger(name)
+    f=logging.FileHandler(path) 
+    f.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    logger.addHandler(f)
+    logger.setLevel('INFO')
+    return logger
+
 

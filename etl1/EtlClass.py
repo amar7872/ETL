@@ -23,14 +23,29 @@ class ETL:
 
         my_logger.info("***************************Run beggining********************************")
         my_logger.info("uploading raw data to GCS...")
-        self.upload_data_in_gcs()
+        try:
+            self.upload_data_in_gcs()
+        except Exception as e:
+            my_logger.error(e)
 
+        
         my_logger.info("staging data in BigQuery...")
-        self.stage_in_bigquery()
+        try:
+            self.stage_in_bigquery()
+        except Exception as e:
+            my_logger.error(e)
 
         my_logger.info("uploading logfile to GCS...")
-        self.upload_logs_in_GCS()
+        try:
+            self.upload_logs_in_GCS()
+        except Exception as e:
+            my_logger.error(e)
 
+        my_logger.info("loading data to core table...")
+        try:
+            self.load_to_core()
+        except Exception as e:
+            my_logger.error(e)
         my_logger.info("******************************Run End************************************\n")
 
 
@@ -43,7 +58,7 @@ class ETL:
                
         bucket=gcs.get_bucket('etl-source-data0')
         
-        input_dir=Path("../../input_data/ETL1")
+        input_dir=Path("/home/amar_gcplearning7872/input_data/ETL1/")
         input_files =os.listdir(input_dir)
 
         for f in input_files:
@@ -71,6 +86,19 @@ class ETL:
                                              field_delimiter=";")
             job = bq_client.load_table_from_uri(f"gs://etl-source-data0/{blob}", 'stage.etl1_raw', job_config=load_conf)
             job.result()
+
+
+    def load_to_core(self):
+
+        with open("/home/amar_gcplearning7872/python_projects/test_project1/etl1/sql/query.sql", 'r') as f:
+            sql_str= f.read() 
+
+        secret_dict= get_secret(GCP_PROJECT_ID, self.secret_name)
+        bq_client=bigquery.Client.from_service_account_info(secret_dict)
+
+        sql_job=bq_client.query(sql_str)
+        sql_job.result()
+
 
 
     def upload_logs_in_GCS(self):
